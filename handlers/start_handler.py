@@ -7,7 +7,7 @@ from services import get_or_create_user, get_quiz
 from services.quiz_engine import send_question
 from services.session_service import get_active_session_by_chat, create_session
 from models import QuizSession
-from keyboards.quiz_keyboards import main_menu_kb
+from keyboards.quiz_keyboards import main_menu_kb, webapp_kb
 from utils.helpers import get_quiz_share_link
 from config import BOT_USERNAME
 
@@ -32,6 +32,7 @@ I help you create and take interactive MCQ quizzes using native Telegram polls.
 
 <b>Quick Start:</b>
 Use /create to make your first quiz!
+You can also use /webapp to launch the Web App creation tool.
 """
 
 HELP_TEXT = """
@@ -45,6 +46,7 @@ HELP_TEXT = """
 
 <b>Quiz Management:</b>
 /create — Create a new quiz
+/webapp — Launch Web App creation tool
 /quizzes — View your quizzes
 /leaderboard — Global leaderboard
 
@@ -86,6 +88,14 @@ async def cmd_start(message: Message, command: CommandObject):
         return
 
     await message.answer(START_TEXT, parse_mode="HTML", reply_markup=main_menu_kb())
+
+
+@router.message(Command("webapp"))
+async def cmd_webapp(message: Message):
+    await message.answer(
+        "🌐 Click the button below to open the Quiz Creation Web App:",
+        reply_markup=webapp_kb(),
+    )
 
 
 @router.message(Command("help"))

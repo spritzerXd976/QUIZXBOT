@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Create Quiz</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            margin: 0;
+            padding: 16px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid var(--tg-theme-hint-color, #cccccc);
+            border-radius: 8px;
+            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            color: var(--tg-theme-text-color, #000000);
+            font-size: 16px;
+        }
+        .question-card {
+            border: 1px solid var(--tg-theme-hint-color, #cccccc);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+            background-color: var(--tg-theme-secondary-bg-color, #f9f9f9);
+        }
+        .question-card h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .remove-btn {
+            color: #ff3b30;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .option-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .option-group input[type="radio"] {
+            margin-right: 8px;
+        }
+        .option-group input[type="text"] {
+            flex-grow: 1;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+        .btn-secondary {
+            background-color: var(--tg-theme-hint-color, #999999);
+        }
+    </style>
+</head>
+<body>
+    <h1>Create New Quiz</h1>
+
+    <div class="form-group">
+        <label for="quizTitle">Quiz Title</label>
+        <input type="text" id="quizTitle" placeholder="Enter quiz title" required>
+    </div>
+
+    <div id="questionsContainer">
+        <!-- Questions will be added here -->
+    </div>
+
+    <button class="btn btn-secondary" onclick="addQuestion()">+ Add Question</button>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+
+        let questionCount = 0;
+
+        function addQuestion() {
+            questionCount++;
+            const qId = questionCount;
+
+            const div = document.createElement('div');
+            div.className = 'question-card';
+            div.id = `q-${qId}`;
+
+            div.innerHTML = `
+                <h3>Question ${qId} <span class="remove-btn" onclick="removeQuestion(${qId})">Remove</span></h3>
+                <div class="form-group">
+                    <input type="text" id="qtext-${qId}" placeholder="Enter question text" required>
+                </div>
+
+                <label>Options (select the correct one):</label>
+                <div class="option-group">
+                    <input type="radio" name="correct-${qId}" value="0" checked>
+                    <input type="text" id="q-${qId}-opt-0" placeholder="Option A" required>
+                </div>
+                <div class="option-group">
+                    <input type="radio" name="correct-${qId}" value="1">
+                    <input type="text" id="q-${qId}-opt-1" placeholder="Option B" required>
+                </div>
+                <div class="option-group">
+                    <input type="radio" name="correct-${qId}" value="2">
+                    <input type="text" id="q-${qId}-opt-2" placeholder="Option C">
+                </div>
+                <div class="option-group">
+                    <input type="radio" name="correct-${qId}" value="3">
+                    <input type="text" id="q-${qId}-opt-3" placeholder="Option D">
+                </div>
+
+                <div class="form-group" style="margin-top:8px;">
+                    <label>Explanation (Optional)</label>
+                    <input type="text" id="q-${qId}-exp" placeholder="Explanation">
+                </div>
+            `;
+
+            document.getElementById('questionsContainer').appendChild(div);
+            updateMainButton();
+        }
+
+        function removeQuestion(id) {
+            document.getElementById(`q-${id}`).remove();
+            updateMainButton();
+        }
+
+        function updateMainButton() {
+            const cards = document.querySelectorAll('.question-card');
+            if (cards.length > 0) {
+                tg.MainButton.setText("CREATE QUIZ");
+                tg.MainButton.show();
+            } else {
+                tg.MainButton.hide();
+            }
+        }
+
+        tg.MainButton.onClick(() => {
+            const title = document.getElementById('quizTitle').value.trim();
+            if (!title) {
+                tg.showAlert("Please enter a quiz title.");
+                return;
+            }
+
+            const cards = document.querySelectorAll('.question-card');
+            if (cards.length === 0) {
+                tg.showAlert("Please add at least one question.");
+                return;
+            }
+
+            const questions = [];
+            let isValid = true;
+
+            cards.forEach(card => {
+                const idStr = card.id.split('-')[1];
+                const qtext = document.getElementById(`qtext-${idStr}`).value.trim();
+
+                if (!qtext) isValid = false;
+
+                const options = [];
+                const correctIdx = parseInt(document.querySelector(`input[name="correct-${idStr}"]:checked`).value);
+
+                for (let i = 0; i < 4; i++) {
+                    const optInput = document.getElementById(`q-${idStr}-opt-${i}`);
+                    const val = optInput.value.trim();
+                    if (val) {
+                        options.push({
+                            text: val,
+                            is_correct: i === correctIdx
+                        });
+                    }
+                }
+
+                if (options.length < 2) {
+                    isValid = false;
+                }
+
+                const explanation = document.getElementById(`q-${idStr}-exp`).value.trim();
+
+                questions.push({
+                    text: qtext,
+                    options: options,
+                    explanation: explanation,
+                    timer: 30
+                });
+            });
+
+            if (!isValid) {
+                tg.showAlert("Please fill all required fields and ensure each question has at least 2 options.");
+                return;
+            }
+
+            const data = {
+                title: title,
+                questions: questions
+            };
+
+            tg.sendData(JSON.stringify(data));
+        });
+
+        // Add first question automatically
+        addQuestion();
+    </script>
+</body>
+</html>
