@@ -1,7 +1,14 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 from typing import List, Optional
 from models import Quiz
+from config import WEBAPP_URL
+
+
+def webapp_kb() -> ReplyKeyboardMarkup:
+    builder = ReplyKeyboardBuilder()
+    builder.button(text="🌐 Create via Web App", web_app=WebAppInfo(url=WEBAPP_URL))
+    return builder.as_markup(resize_keyboard=True, one_time_keyboard=True)
 
 
 def main_menu_kb() -> InlineKeyboardMarkup:

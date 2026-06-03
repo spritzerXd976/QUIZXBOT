@@ -11,6 +11,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.default import DefaultBotProperties
 
+from aiohttp import web
 from config import BOT_TOKEN
 from database import connect_db, disconnect_db
 from handlers import start_router, creation_router, play_router, profile_router
@@ -21,6 +22,20 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
+
+
+async def webapp_handler(request):
+    return web.FileResponse('static/webapp.html')
+
+async def start_web_app():
+    app = web.Application()
+    app.router.add_get('/webapp', webapp_handler)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', 8080)
+    await site.start()
+    logger.info("🌐 Web App server running on port 8080")
+    return runner
 
 
 async def main():
@@ -60,9 +75,12 @@ async def main():
 
     logger.info("🤖 Quiz Bot starting...")
 
+    web_runner = await start_web_app()
+
     try:
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     finally:
+        await web_runner.cleanup()
         await disconnect_db()
         await bot.session.close()
         logger.info("Bot stopped.")

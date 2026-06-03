@@ -7,6 +7,7 @@ Quiz creation flow:
 """
 import logging
 from aiogram import Router, F, Bot
+import json
 from aiogram.types import Message, CallbackQuery, Poll
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -181,6 +182,62 @@ async def waiting_poll_other_message(message: Message, state: FSMContext):
         "Tap the 📎 attachment icon → Poll → Quiz type",
         parse_mode="HTML",
     )
+
+
+# ─── Web App Quiz Creation ─────────────────────────────────────────────────────
+
+@router.message(F.web_app_data)
+async def handle_webapp_data(message: Message):
+    try:
+        data = json.loads(message.web_app_data.data)
+        title = data.get("title")
+        questions_data = data.get("questions", [])
+
+        if not title or not questions_data:
+            await message.answer("⚠️ Received invalid data from Web App.")
+            return
+
+        user = message.from_user
+
+        # Create Quiz
+        quiz = Quiz(
+            title=title,
+            creator_id=user.id,
+            creator_name=user.first_name,
+        )
+        await create_quiz(quiz)
+        await increment_quiz_created(user.id)
+
+        # Add questions
+        for q_data in questions_data:
+            options = [
+                QuizOption(text=opt["text"], is_correct=opt["is_correct"])
+                for opt in q_data["options"]
+            ]
+            question = QuizQuestion(
+                text=q_data["text"],
+                options=options,
+                explanation=q_data.get("explanation", ""),
+                timer=quiz.settings.get("default_timer", 30),
+            )
+            await add_question_to_quiz(quiz.quiz_id, question)
+
+        # Reload quiz to get updated state
+        quiz = await get_quiz(quiz.quiz_id)
+
+        share_link = get_quiz_share_link(quiz.quiz_id)
+        await message.answer(
+            f"🎉 <b>Quiz Created via Web App!</b>\n\n"
+            f"📝 <b>{escape_html(quiz.title)}</b>\n"
+            f"❓ Questions: {len(quiz.questions)}\n\n"
+            f"🔗 <b>Share Link:</b>\n<code>{share_link}</code>\n\n"
+            "Anyone with this link can start your quiz!",
+            parse_mode="HTML",
+            reply_markup=quiz_detail_kb(quiz),
+        )
+    except Exception as e:
+        logger.error(f"Error handling WebApp data: {e}")
+        await message.answer("❌ Failed to process the Web App data.")
 
 
 # ─── Done adding questions ─────────────────────────────────────────────────────

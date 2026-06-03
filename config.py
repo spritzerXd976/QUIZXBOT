@@ -16,6 +16,7 @@ DB_NAME = os.getenv("DB_NAME", "quiz_bot")
 
 # Bot info
 BOT_USERNAME = os.getenv("BOT_USERNAME", "YumiiXbot")
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://example.com/webapp")
 
 # Quiz settings
 DEFAULT_QUESTION_TIMER = 30  # seconds
